@@ -460,6 +460,23 @@
   });
   setInterval(function() { if (Api.file().length && navigator.onLine) envoyerFileEnFond(); }, 60000);
 
+  // Sur iPhone / iPad, aucune proposition d'installation automatique :
+  // on explique comment faire, tant que l'application n'est pas installée.
+  (function aideInstallationIos() {
+    var ios = /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); // iPad récent
+    var installee = window.navigator.standalone === true ||
+      (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+    var masquee = false;
+    try { masquee = localStorage.getItem('fri-appel-aide-ios') === 'non'; } catch (e) { /* ignore */ }
+    if (!ios || installee || masquee) return;
+    $('aide-ios').classList.add('visible');
+    $('fermer-aide-ios').onclick = function() {
+      $('aide-ios').classList.remove('visible');
+      try { localStorage.setItem('fri-appel-aide-ios', 'non'); } catch (e) { /* ignore */ }
+    };
+  })();
+
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function() {
       navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(function(e) { console.warn('Service worker non installé', e); });
