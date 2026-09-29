@@ -580,6 +580,11 @@ function genererPins() {
 // Définit un code précis pour un animateur (usage depuis un autre script,
 // sans jamais écrire le code en dur ici).
 function definirPin(nomAnimateur, pin) {
+  if (!nomAnimateur || pin === undefined) {
+    throw new Error('definirPin ne se lance pas directement depuis le menu : ajouter temporairement ' +
+      'function tmp() { definirPin("NOM EXACT DU CLASSEUR", "123456"); } puis exécuter tmp et la supprimer. ' +
+      'Pour un code tiré au hasard, utiliser plutôt genererPins().');
+  }
   pin = verifierFormatPin_(pin, nomAnimateur);
   var pins = getPinsHash_();
   var hash = hacherPin_(pin);
