@@ -29,9 +29,18 @@ var Api = (function() {
     } catch (e) { /* ignore */ }
   }
 
+  // Le téléphone a du réseau mais le script ne répond pas correctement :
+  // le plus souvent un déploiement Apps Script avec l'ancien code, ou dont
+  // l'accès n'est pas « Tout le monde » (Google renvoie alors une page que
+  // le navigateur bloque). On le signale clairement au lieu de « pas de réseau ».
+  var MESSAGE_SERVEUR = 'Le serveur Apps Script ne répond pas correctement. Vérifier le déploiement : ' +
+    'nouvelle version de Code.gs déployée, et accès « Tout le monde ».';
+
   function erreurHorsLigne() {
-    var err = new Error('Pas de connexion au serveur.');
-    err.horsLigne = true;
+    var enLigne = navigator.onLine !== false;
+    var err = new Error(enLigne ? MESSAGE_SERVEUR : 'Pas de connexion au serveur.');
+    err.horsLigne = true; // l'appel reste en file d'attente dans les deux cas
+    err.serveur = enLigne;
     return err;
   }
 
@@ -59,7 +68,7 @@ var Api = (function() {
     try {
       data = await reponse.json();
     } catch (e) {
-      throw new Error('Réponse inattendue du serveur (vérifier le déploiement Apps Script).');
+      throw new Error(MESSAGE_SERVEUR);
     }
     if (data.sessionExpiree) {
       if (!jeton) fermerSession(); // seulement si c'est la session en cours qui a expiré

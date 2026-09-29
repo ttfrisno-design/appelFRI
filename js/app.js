@@ -91,7 +91,7 @@
       if (e.sessionExpiree) {
         afficherEcran('ecran-pin');
         $('erreur-pin').textContent = e.message;
-      } else if (e.horsLigne) {
+      } else if (e.horsLigne && !e.serveur) {
         afficherErreur('Pas de réseau, et cet écran n\'a encore jamais été chargé sur ce téléphone.');
       } else {
         afficherErreur('Erreur : ' + e.message);
@@ -132,7 +132,7 @@
       demarrerSession();
       envoyerFileEnFond();
     } catch (e) {
-      $('erreur-pin').textContent = e.horsLigne ? 'Pas de réseau : la connexion nécessite Internet.' : 'Erreur : ' + e.message;
+      $('erreur-pin').textContent = e.horsLigne && !e.serveur ? 'Pas de réseau : la connexion nécessite Internet.' : e.message;
     } finally {
       $('btn-connecter').disabled = false;
     }
