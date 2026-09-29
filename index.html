@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Appel FRI</title>
+  <meta name="description" content="Appel présent / absent des animateurs du Foyer Rural d'Isneauville.">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Appel FRI">
+  <meta name="theme-color" content="#2D6A4F">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="css/appel.css">
+</head>
+<body>
+
+  <div class="logo"><img src="icons/logo.jpg" alt="Foyer Rural d'Isneauville"></div>
+  <h1>Appel FRI</h1>
+  <div id="banniere-hors-ligne" class="banniere info-b"></div>
+  <div id="banniere-erreur" class="banniere erreur-b"></div>
+  <div class="retour-haut"><span id="lien-retour-haut" class="lien-retour"></span></div>
+
+  <!-- Écran 1 : code -->
+  <div id="ecran-pin" class="ecran">
+    <div class="carte">
+      <div class="erreur" id="erreur-pin"></div>
+      <input type="password" id="input-pin" maxlength="6" placeholder="------" inputmode="numeric" autocomplete="off">
+      <button id="btn-connecter">Se connecter</button>
+    </div>
+    <p class="note">Code animateur, ou code de consultation (lecture seule).</p>
+  </div>
+
+  <!-- Écran consultation 0 : choix du type d'activité -->
+  <div id="ecran-consult-types" class="ecran">
+    <div class="entete-creneau">Consultation — quelle activité ?</div>
+    <div id="consult-liste-types"></div>
+  </div>
+
+  <!-- Écran consultation A : recherche d'un créneau -->
+  <div id="ecran-consult-liste" class="ecran">
+    <div class="entete-creneau" id="consult-titre-type"></div>
+    <div class="carte">
+      <input type="text" id="consult-recherche" placeholder="Filtrer par activité, jour, animateur...">
+    </div>
+    <div id="consult-liste-creneaux"></div>
+  </div>
+
+  <!-- Écran consultation B : dates -->
+  <div id="ecran-consult-dates" class="ecran">
+    <div class="entete-creneau" id="consult-titre-dates"></div>
+    <div id="consult-liste-dates"></div>
+  </div>
+
+  <!-- Écran consultation C : présences (lecture seule) -->
+  <div id="ecran-consult-presences" class="ecran">
+    <div class="entete-creneau" id="consult-titre-presences"></div>
+    <div id="consult-liste-presences"></div>
+  </div>
+
+  <!-- Écran 2 : liste des créneaux -->
+  <div id="ecran-creneaux" class="ecran">
+    <div class="entete-creneau" id="bonjour-animateur"></div>
+    <div id="liste-creneaux"></div>
+    <button class="secondaire" id="btn-consulter">👁 Consulter tous les créneaux (lecture seule)</button>
+  </div>
+
+  <!-- Écran 3 : liste des dates -->
+  <div id="ecran-dates" class="ecran">
+    <div class="entete-creneau" id="titre-creneau-dates"></div>
+    <div id="liste-dates"></div>
+  </div>
+
+  <!-- Écran 4 : appel -->
+  <div id="ecran-appel" class="ecran">
+    <div class="entete-creneau" id="titre-creneau-appel"></div>
+    <div id="liste-membres"></div>
+
+    <button class="secondaire" id="btn-ouvrir-ajout">+ Ajouter un membre</button>
+
+    <div id="form-ajout-membre" class="carte" style="display:none; margin-top:12px;">
+      <input type="text" id="ajout-nom" placeholder="Nom" autocomplete="off">
+      <input type="text" id="ajout-prenom" placeholder="Prénom" autocomplete="off">
+      <input type="tel" id="ajout-telephone" class="champ" placeholder="Téléphone" autocomplete="off">
+      <input type="email" id="ajout-email" placeholder="Email" autocomplete="off">
+      <button id="btn-confirmer-ajout">Ajouter à la liste</button>
+      <button class="secondaire" id="btn-annuler-ajout">Annuler</button>
+    </div>
+
+    <button id="btn-valider" style="margin-top:12px;">Valider l'appel</button>
+  </div>
+
+  <!-- Écran 5 : confirmation -->
+  <div id="ecran-confirmation" class="ecran">
+    <div class="carte confirmation">
+      <div class="coche" id="coche-confirmation">✅</div>
+      <div id="texte-confirmation"></div>
+      <button class="secondaire" id="btn-autre-appel">Faire un autre appel</button>
+    </div>
+  </div>
+
+  <div class="pied">
+    <span class="lien-retour" id="lien-envoyer-file" style="display:none;"></span>
+    <span class="lien-retour" id="lien-deconnexion" style="display:none;">Se déconnecter</span>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

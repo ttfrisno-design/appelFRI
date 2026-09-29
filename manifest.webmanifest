@@ -1,0 +1,17 @@
+{
+  "name": "Appel FRI – Foyer Rural d'Isneauville",
+  "short_name": "Appel FRI",
+  "description": "Appel présent / absent des animateurs, directement dans les classeurs du Foyer Rural.",
+  "lang": "fr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F1F5F3",
+  "theme_color": "#2D6A4F",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
