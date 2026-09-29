@@ -462,7 +462,7 @@
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function() {
-      navigator.serviceWorker.register('sw.js').catch(function(e) { console.warn('Service worker non installé', e); });
+      navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(function(e) { console.warn('Service worker non installé', e); });
     });
   }
 
