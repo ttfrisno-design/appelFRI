@@ -66,7 +66,8 @@ CORS préalable qu'Apps Script ne gère pas). Le fichier HTML « Index » de l'a
 | `genererPins()` | Crée ou renouvelle les codes des noms listés dans la fonction |
 | `listerAnimateursAvecPin()` | Liste les noms ayant un code |
 | `supprimerPin(nom)` | Retire l'accès d'un animateur (à appeler avec le nom, depuis une petite fonction temporaire) |
-| `genererCodeConsultation()` / `supprimerCodeConsultation()` | Gère le code de lecture seule |
+| `genererCodeConsultation()` / `supprimerCodeConsultation()` | Crée (au hasard) ou supprime le code de lecture seule |
+| `definirCodeConsultation(code)` | Choisit soi-même le code de lecture seule (via une fonction temporaire) |
 | `deconnecterToutLeMonde()` | Invalide toutes les sessions ouvertes |
 | `viderCacheCreneaux()` | Rafraîchit immédiatement la liste des créneaux en consultation |
 | `debloquerConnexions()` | Lève le blocage après trop de codes faux |

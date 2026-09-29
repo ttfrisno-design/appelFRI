@@ -621,6 +621,22 @@ function genererCodeConsultation() {
   Logger.log('Code de consultation (lecture seule) : ' + pin);
 }
 
+// Pour choisir soi-même le code de consultation (sans l'écrire durablement ici) :
+// ajouter temporairement  function tmp() { definirCodeConsultation("123456"); }
+// exécuter tmp, puis supprimer ces lignes.
+function definirCodeConsultation(pin) {
+  if (pin === undefined) {
+    throw new Error('definirCodeConsultation ne se lance pas directement depuis le menu : ajouter temporairement ' +
+      'function tmp() { definirCodeConsultation("123456"); } puis exécuter tmp et la supprimer. ' +
+      'Pour un code tiré au hasard, utiliser plutôt genererCodeConsultation().');
+  }
+  pin = verifierFormatPin_(pin, 'consultation');
+  var hash = hacherPin_(pin);
+  if (hashDejaUtilise_(getPinsHash_(), hash, null)) throw new Error('Ce code est déjà utilisé par un animateur.');
+  props_().setProperty('CONSULTATION_HASH', hash);
+  Logger.log('Code de consultation défini.');
+}
+
 function supprimerCodeConsultation() {
   props_().deleteProperty('CONSULTATION_HASH');
   Logger.log('Consultation désactivée.');
