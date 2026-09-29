@@ -1,0 +1,165 @@
+* { box-sizing: border-box; }
+body {
+  font-family: Arial, sans-serif;
+  background: #F1F5F3;
+  margin: 0;
+  padding: 16px;
+  color: #1B4332;
+}
+.ecran { display: none; max-width: 480px; margin: 0 auto; }
+.ecran.actif { display: block; }
+h1 {
+  font-size: 20px;
+  text-align: center;
+  color: #1B4332;
+  margin-bottom: 24px;
+}
+.carte {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  margin-bottom: 12px;
+}
+input[type="tel"], input[type="password"] {
+  width: 100%;
+  font-size: 24px;
+  text-align: center;
+  letter-spacing: 8px;
+  padding: 14px;
+  border: 2px solid #40916C;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+button {
+  width: 100%;
+  font-size: 16px;
+  font-weight: bold;
+  padding: 14px;
+  border: none;
+  border-radius: 8px;
+  background: #2D6A4F;
+  color: white;
+  cursor: pointer;
+}
+button:disabled { background: #A0AEC0; }
+button.secondaire {
+  background: white;
+  color: #2D6A4F;
+  border: 2px solid #2D6A4F;
+  margin-top: 8px;
+}
+.erreur {
+  color: #C0392B;
+  text-align: center;
+  margin-bottom: 12px;
+  font-size: 14px;
+  min-height: 18px;
+}
+.creneau-item, .date-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: white;
+  border: 2px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  font-size: 15px;
+}
+.creneau-item b, .date-item b { color: #1B4332; }
+.membre-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: white;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+}
+.membre-nom { font-size: 15px; }
+.toggle {
+  display: flex;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 2px solid #E2E8F0;
+}
+.toggle button {
+  width: auto;
+  padding: 8px 16px;
+  font-size: 13px;
+  border-radius: 0;
+  background: white;
+  color: #718096;
+}
+.toggle button.on-present { background: #40916C; color: white; }
+
+.badge-lecture {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: bold;
+  color: white;
+}
+.badge-lecture.present { background: #40916C; }
+.badge-lecture.absent { background: #C0392B; }
+.badge-lecture.inconnu { background: #A0AEC0; }
+.toggle button.on-absent { background: #C0392B; color: white; }
+.entete-creneau {
+  text-align: center;
+  margin-bottom: 16px;
+  font-size: 14px;
+  color: #40916C;
+}
+.lien-retour {
+  text-align: center;
+  display: block;
+  margin-top: 16px;
+  color: #40916C;
+  cursor: pointer;
+  font-size: 14px;
+}
+.confirmation {
+  text-align: center;
+  padding: 40px 20px;
+}
+.confirmation .coche {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+  
+
+/* ── Ajouts version application mobile ── */
+body {
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+           max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+}
+.logo { text-align: center; margin-bottom: 8px; }
+.logo img { width: 110px; height: auto; display: inline-block; }
+input[type="text"], input[type="email"], .champ {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 8px;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  font-size: 16px; /* évite le zoom automatique sur iPhone */
+}
+.banniere {
+  display: none;
+  max-width: 480px;
+  margin: 0 auto 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+.banniere.erreur-b { background: #FDECEA; border: 1px solid #C0392B; color: #C0392B; }
+.banniere.info-b { background: #FFF8E1; border: 1px solid #D4A017; color: #7A5C00; }
+.banniere.visible { display: block; }
+.retour-haut { max-width: 480px; margin: 0 auto 12px; text-align: center; }
+.retour-haut .lien-retour { display: none; margin-top: 0; }
+.chargement { text-align: center; color: #718096; }
+.telephone { display: block; font-size: 12px; color: #40916C; text-decoration: none; }
+.pied { max-width: 480px; margin: 24px auto 0; text-align: center; }
+.pied .lien-retour { display: inline-block; margin: 0 8px; }
+.note { font-size: 12px; color: #718096; text-align: center; margin-top: 12px; }
