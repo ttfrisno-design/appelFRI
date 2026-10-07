@@ -53,7 +53,9 @@ var Api = (function() {
     var corps = Object.assign({ action: action, jeton: jeton || (s && s.jeton) }, params || {});
 
     var ctrl = new AbortController();
-    var minuterie = setTimeout(function() { ctrl.abort(); }, DELAI_MS);
+    // L'envoi d'e-mails un par un peut prendre plus d'une minute pour un grand groupe.
+    var delai = action === 'envoyerEmailGroupe' ? 5 * 60000 : DELAI_MS;
+    var minuterie = setTimeout(function() { ctrl.abort(); }, delai);
     var reponse;
     try {
       reponse = await fetch(url, { method: 'POST', body: JSON.stringify(corps), redirect: 'follow', signal: ctrl.signal });

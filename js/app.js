@@ -361,9 +361,11 @@
     if (!confirm('Envoyer cet e-mail à ' + (avec ? avec + ' adhérent(s)' : 'tous les adhérents ayant une adresse') +
         ' du créneau ' + etat.creneau.activite + ' ?')) return;
 
+    // idEnvoi : le serveur ne renvoie pas deux fois le même e-mail si la réponse s'est perdue.
+    var idEnvoi = Date.now() + '-' + Math.random().toString(36).slice(2);
     var id = Api.mettreEnFile({
       action: 'envoyerEmailGroupe',
-      params: { animateurFichier: etat.creneau.animateurFichier, code: etat.creneau.code, sujet: sujet, message: message },
+      params: { animateurFichier: etat.creneau.animateurFichier, code: etat.creneau.code, sujet: sujet, message: message, idEnvoi: idEnvoi },
       libelle: 'E-mail « ' + sujet + ' »'
     });
     var btn = $('btn-envoyer-email');
@@ -381,7 +383,8 @@
     var erreur = bilan.erreurs.filter(function(x) { return x.appel.id === id; })[0];
     var info = $('email-info');
     if (envoye) {
-      info.textContent = '✅ E-mail envoyé à ' + envoye.res.nombre + ' adresse(s).';
+      info.textContent = '✅ E-mail envoyé à ' + envoye.res.nombre + ' adhérent(s)' +
+        (envoye.res.echecs ? ' (' + envoye.res.echecs + ' échec(s), voir le récapitulatif reçu par le Foyer)' : '') + '.';
     } else if (erreur && !erreur.garde) {
       afficherErreur(erreur.res.message);
     } else {
