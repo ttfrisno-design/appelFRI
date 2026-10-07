@@ -53,8 +53,7 @@ CORS préalable qu'Apps Script ne gère pas). Le fichier HTML « Index » de l'a
 - **Prévenir le groupe** (écran d'appel, après choix de la date) : message prérempli
   (annulation pour absence de l'animateur), modifiable, envoyé au choix :
   - **par e-mail** : envoyé par le compte Google du script (fri.inscri@gmail.com) à toutes les adresses
-    de la colonne Email du créneau, **un e-mail individuel par adhérent** ; le compte du script reçoit
-    un récapitulatif avec la liste des destinataires. Hors connexion, l'e-mail part au retour du réseau.
+    de la colonne Email du créneau, en **copie cachée**. Hors connexion, l'e-mail part au retour du réseau.
     Limite Gmail gratuite : environ 100 destinataires par jour (`autoriserEnvoiEmails()` affiche le quota restant) ;
   - **par SMS** : depuis le téléphone de l'animateur, **un adhérent à la fois** : personne ne voit
     le numéro des autres.

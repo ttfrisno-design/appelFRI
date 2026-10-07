@@ -49,7 +49,8 @@ var CONFIG = {
   // E-mails « Prévenir le groupe » : nom d'expéditeur affiché, et adresse
   // de réponse facultative (vide = les réponses reviennent au compte du script).
   EMAIL_NOM_EXPEDITEUR: 'Foyer Rural d\'Isneauville',
-  EMAIL_REPONDRE_A: ''
+  EMAIL_REPONDRE_A: '',
+  EMAIL_DESTINATAIRES_PAR_ENVOI: 50 // limite Gmail par message
 };
 
 // Mêmes préfixes que le script des classeurs — sert à filtrer le mode
@@ -474,9 +475,8 @@ function actionEnregistrerAppel_(req, session) {
 }
 
 // ── Prévenir le groupe par e-mail ───────────────────────────────
-// Envoyé par le compte Google du script : un e-mail individuel par adhérent
-// (personne ne voit l'adresse des autres), puis un récapitulatif au compte
-// du script avec la liste des destinataires.
+// Envoyé par le compte Google du script, adresses en copie cachée :
+// aucun adhérent ne voit l'adresse des autres.
 
 function emailValide_(email) {
   return /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/.test(String(email || '').trim());
@@ -488,28 +488,19 @@ function actionEnvoyerEmailGroupe_(req, session) {
   var message = String(req.message || '').trim().slice(0, 5000);
   if (!sujet || !message) return { ok: false, message: 'Objet et message requis.' };
 
-  // Anti-doublon : si le téléphone renvoie le même envoi (réponse perdue
-  // en route), on ne renvoie pas les e-mails.
-  var cache = CacheService.getScriptCache();
-  var cleEnvoi = req.idEnvoi ? 'EMAIL_' + String(req.idEnvoi).slice(0, 80) : null;
-  if (cleEnvoi && cache.get(cleEnvoi)) return JSON.parse(cache.get(cleEnvoi));
-
   var o = ouvrirOnglet_(req.animateurFichier, req.code);
   if (o.erreur) return { ok: false, message: o.erreur };
   var sheet = o.sheet;
 
   var lastRow = sheet.getLastRow();
-  var destinataires = [];
-  var dejaVus = {};
+  var adresses = [];
   if (lastRow >= 4) {
-    sheet.getRange(4, 1, lastRow - 3, 4).getDisplayValues().forEach(function(r) {
-      var email = String(r[3] || '').trim().toLowerCase();
-      if (!emailValide_(email) || dejaVus[email]) return;
-      dejaVus[email] = true;
-      destinataires.push({ email: email, nom: (String(r[1] || '') + ' ' + String(r[0] || '')).trim() });
+    sheet.getRange(4, 4, lastRow - 3, 1).getDisplayValues().forEach(function(r) {
+      var email = String(r[0] || '').trim().toLowerCase();
+      if (emailValide_(email) && adresses.indexOf(email) === -1) adresses.push(email);
     });
   }
-  if (destinataires.length === 0) return { ok: false, message: 'Aucune adresse e-mail dans ce créneau.' };
+  if (adresses.length === 0) return { ok: false, message: 'Aucune adresse e-mail dans ce créneau.' };
 
   var quota;
   try {
@@ -519,46 +510,26 @@ function actionEnvoyerEmailGroupe_(req, session) {
       'autoriserEnvoiEmails() dans Apps Script, accepter l\'autorisation, puis redéployer une nouvelle version. ' +
       'En attendant, prévenir par SMS.' };
   }
-  if (quota < destinataires.length) {
+  if (quota < adresses.length) {
     return { ok: false, message: 'Limite d\'envoi Google atteinte pour aujourd\'hui (' + quota + ' e-mail(s) restant(s) pour ' +
-      destinataires.length + ' destinataires). Réessayer demain ou prévenir par SMS.' };
+      adresses.length + ' destinataires). Réessayer demain ou prévenir par SMS.' };
   }
 
+  var expediteur = Session.getEffectiveUser().getEmail();
   var corps = message + '\n\n— ' + session.nom + ' (envoyé via l\'application d\'appel du ' + CONFIG.EMAIL_NOM_EXPEDITEUR + ')';
-  var envoyes = [];
-  var echecs = [];
-  destinataires.forEach(function(d) {
-    var options = { to: d.email, subject: sujet, body: corps, name: CONFIG.EMAIL_NOM_EXPEDITEUR };
+  for (var i = 0; i < adresses.length; i += CONFIG.EMAIL_DESTINATAIRES_PAR_ENVOI) {
+    var options = {
+      to: expediteur,
+      bcc: adresses.slice(i, i + CONFIG.EMAIL_DESTINATAIRES_PAR_ENVOI).join(','),
+      subject: sujet,
+      body: corps,
+      name: CONFIG.EMAIL_NOM_EXPEDITEUR
+    };
     if (CONFIG.EMAIL_REPONDRE_A) options.replyTo = CONFIG.EMAIL_REPONDRE_A;
-    try {
-      MailApp.sendEmail(options);
-      envoyes.push(d);
-    } catch (err) {
-      echecs.push(d.nom + ' <' + d.email + '> : ' + err.message);
-    }
-  });
-  if (envoyes.length === 0) return { ok: false, message: 'Aucun e-mail n\'a pu être envoyé : ' + echecs[0] };
-
-  // Récapitulatif au compte du script (trace de l'envoi), si le quota le permet.
-  try {
-    if (MailApp.getRemainingDailyQuota() > 0) {
-      MailApp.sendEmail({
-        to: Session.getEffectiveUser().getEmail(),
-        subject: '[Récapitulatif] ' + sujet,
-        name: CONFIG.EMAIL_NOM_EXPEDITEUR,
-        body: 'Envoyé par ' + session.nom + ' (' + req.animateurFichier + ' / ' + req.code + ') à ' + envoyes.length +
-          ' adhérent(s) :\n' + envoyes.map(function(d) { return '- ' + d.nom + ' <' + d.email + '>'; }).join('\n') +
-          (echecs.length ? '\n\nÉchecs :\n' + echecs.join('\n') : '') +
-          '\n\n----- Message envoyé -----\nObjet : ' + sujet + '\n\n' + corps
-      });
-    }
-  } catch (err) { /* le récapitulatif est facultatif */ }
-
-  Logger.log('E-mail groupe envoyé par ' + session.nom + ' (' + req.animateurFichier + ' / ' + req.code + ') à ' + envoyes.length + ' adhérent(s).');
-  var res = { ok: true, nombre: envoyes.length };
-  if (echecs.length) res.echecs = echecs.length;
-  if (cleEnvoi) { try { cache.put(cleEnvoi, JSON.stringify(res), 21600); } catch (e) { /* ignore */ } }
-  return res;
+    MailApp.sendEmail(options);
+  }
+  Logger.log('E-mail groupe envoyé par ' + session.nom + ' (' + req.animateurFichier + ' / ' + req.code + ') à ' + adresses.length + ' adresse(s).');
+  return { ok: true, nombre: adresses.length };
 }
 
 // ── Actions de consultation (lecture seule, jeton obligatoire) ──
