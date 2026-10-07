@@ -55,7 +55,8 @@ CORS préalable qu'Apps Script ne gère pas). Le fichier HTML « Index » de l'a
   - **par e-mail** : envoyé par le compte Google du script (fri.inscri@gmail.com) à toutes les adresses
     de la colonne Email du créneau, en **copie cachée**. Hors connexion, l'e-mail part au retour du réseau.
     Limite Gmail gratuite : environ 100 destinataires par jour (`autoriserEnvoiEmails()` affiche le quota restant) ;
-  - **par SMS** : depuis le téléphone de l'animateur, **un adhérent à la fois** : personne ne voit
+  - **dans un groupe WhatsApp** existant : WhatsApp s'ouvre avec le message, il reste à choisir le groupe ;
+  - **par SMS ou WhatsApp, un adhérent à la fois**, depuis le téléphone de l'animateur : personne ne voit
     le numéro des autres.
 - **Déconnexion** : efface le jeton et les listes gardées sur le téléphone (les appels en attente sont conservés).
 

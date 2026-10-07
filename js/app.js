@@ -295,8 +295,22 @@
     $('email-sujet').value = '';
   }
 
+  // WhatsApp : numéro international sans « + » (0612345678 → 33612345678).
+  function numeroWhatsApp(tel) {
+    var n = numeroSms(tel);
+    if (!n) return '';
+    if (n.charAt(0) === '+') return n.slice(1);
+    if (n.length === 10 && n.charAt(0) === '0') return '33' + n.slice(1);
+    return n;
+  }
+
+  function lienWhatsApp(numero, message) {
+    return 'https://wa.me/' + numero + '?text=' + encodeURIComponent(message);
+  }
+
   function afficherListeSms() {
     var message = $('sms-message').value.trim();
+    $('lien-whatsapp-groupe').href = 'https://wa.me/?text=' + encodeURIComponent(message);
     var liste = $('sms-liste');
     vider(liste);
     var avecNumero = 0;
@@ -306,21 +320,32 @@
       var numero = numeroSms(m.telephone);
       if (!numero) {
         ligne.appendChild(el('span', 'sans-numero', 'pas de numéro'));
-      } else {
-        avecNumero++;
-        var cle = m.ligne + '|' + numero;
-        var lien = el('a', '', etat.smsEnvoyes[cle] ? 'Renvoyer' : 'Envoyer');
-        lien.href = lienSms(numero, message);
-        if (etat.smsEnvoyes[cle]) ligne.classList.add('envoye');
+        liste.appendChild(ligne);
+        return;
+      }
+      avecNumero++;
+      var cle = m.ligne + '|' + numero;
+      var dejaFait = etat.smsEnvoyes[cle] || {};
+      var boutons = el('span', 'boutons');
+
+      function bouton(canal, texte, href, classe) {
+        var lien = el('a', classe + (dejaFait[canal] ? ' utilise' : ''), texte);
+        lien.href = href;
+        if (canal === 'whatsapp') { lien.target = '_blank'; lien.rel = 'noopener'; }
         lien.onclick = function() {
           if (!$('sms-message').value.trim()) { afficherErreur('Le message est vide.'); return false; }
-          etat.smsEnvoyes[cle] = true;
+          etat.smsEnvoyes[cle] = etat.smsEnvoyes[cle] || {};
+          etat.smsEnvoyes[cle][canal] = true;
+          lien.classList.add('utilise');
           ligne.classList.add('envoye');
-          lien.textContent = 'Renvoyer';
           majCompteurSms();
         };
-        ligne.appendChild(lien);
+        boutons.appendChild(lien);
       }
+      bouton('sms', 'SMS', lienSms(numero, message), 'sms');
+      bouton('whatsapp', 'WhatsApp', lienWhatsApp(numeroWhatsApp(m.telephone), message), 'whatsapp');
+      if (etat.smsEnvoyes[cle]) ligne.classList.add('envoye');
+      ligne.appendChild(boutons);
       liste.appendChild(ligne);
     });
     if (etat.membres.length === 0) liste.appendChild(el('div', 'note', 'Aucun adhérent dans ce créneau.'));
@@ -332,7 +357,7 @@
     var total = Number($('sms-liste').dataset.total || 0);
     var envoyes = Object.keys(etat.smsEnvoyes).length;
     $('sms-compteur').textContent = total
-      ? envoyes + ' / ' + total + ' SMS ouvert(s). Après chaque envoi, revenez ici pour le suivant.'
+      ? envoyes + ' / ' + total + ' adhérent(s) prévenu(s). Après chaque envoi, revenez ici pour le suivant.'
       : 'Aucun numéro de téléphone dans ce créneau.';
   }
 
@@ -597,6 +622,9 @@
   $('btn-ouvrir-sms').onclick = ouvrirPanneauSms;
   $('btn-fermer-sms').onclick = fermerPanneauSms;
   $('btn-envoyer-email').onclick = envoyerEmailGroupe;
+  $('lien-whatsapp-groupe').onclick = function() {
+    if (!$('sms-message').value.trim()) { afficherErreur('Le message est vide.'); return false; }
+  };
   $('sms-message').addEventListener('input', afficherListeSms);
   $('btn-confirmer-ajout').onclick = confirmerAjoutMembre;
   $('btn-annuler-ajout').onclick = fermerFormulaireAjout;
