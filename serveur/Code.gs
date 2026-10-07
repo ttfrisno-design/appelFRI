@@ -502,7 +502,14 @@ function actionEnvoyerEmailGroupe_(req, session) {
   }
   if (adresses.length === 0) return { ok: false, message: 'Aucune adresse e-mail dans ce créneau.' };
 
-  var quota = MailApp.getRemainingDailyQuota();
+  var quota;
+  try {
+    quota = MailApp.getRemainingDailyQuota();
+  } catch (err) {
+    return { ok: false, message: 'L\'envoi d\'e-mails n\'est pas encore autorisé : l\'administrateur doit exécuter ' +
+      'autoriserEnvoiEmails() dans Apps Script, accepter l\'autorisation, puis redéployer une nouvelle version. ' +
+      'En attendant, prévenir par SMS.' };
+  }
   if (quota < adresses.length) {
     return { ok: false, message: 'Limite d\'envoi Google atteinte pour aujourd\'hui (' + quota + ' e-mail(s) restant(s) pour ' +
       adresses.length + ' destinataires). Réessayer demain ou prévenir par SMS.' };
