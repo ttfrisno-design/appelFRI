@@ -163,3 +163,28 @@ input[type="text"], input[type="email"], .champ {
 .pied { max-width: 480px; margin: 24px auto 0; text-align: center; }
 .pied .lien-retour { display: inline-block; margin: 0 8px; }
 .note { font-size: 12px; color: #718096; text-align: center; margin-top: 12px; }
+
+/* ── Prévenir le groupe par SMS ── */
+textarea.champ { font-family: inherit; resize: vertical; }
+.sms-ligne {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid #E2E8F0;
+  font-size: 15px;
+}
+.sms-ligne:last-child { border-bottom: none; }
+.sms-ligne a {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border-radius: 20px;
+  background: #2D6A4F;
+  color: white;
+  font-size: 13px;
+  font-weight: bold;
+  text-decoration: none;
+}
+.sms-ligne.envoye a { background: #A0AEC0; }
+.sms-ligne .sans-numero { color: #A0AEC0; font-size: 13px; }

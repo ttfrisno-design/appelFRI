@@ -2,7 +2,7 @@
 // Les textes venant des classeurs sont toujours insérés avec textContent
 // (jamais innerHTML) pour qu'un nom ne puisse pas injecter de code.
 (function() {
-  var etat = { creneau: null, date: null };
+  var etat = { creneau: null, date: null, membres: [], smsEnvoyes: {} };
   var etatConsult = { type: null, tousCreneaux: [], creneau: null };
 
   var $ = function(id) { return document.getElementById(id); };
@@ -205,7 +205,7 @@
     var nom = el('span', 'membre-nom', m.prenom + ' ' + m.nom);
     if (m.telephone) {
       var tel = el('a', 'telephone', '📞 ' + m.telephone);
-      tel.href = 'tel:' + String(m.telephone).replace(/[^\d+]/g, '');
+      tel.href = 'tel:' + numeroSms(m.telephone);
       nom.appendChild(tel);
     }
 
@@ -231,13 +231,102 @@
     var liste = $('liste-membres');
     chargement(liste);
     afficherEcran('ecran-appel');
+    etat.membres = [];
+    etat.smsEnvoyes = {};
+    fermerPanneauSms();
     requete(Api.lireAvecCache('listerMembres', paramsMembres()), function(res) {
       vider(liste);
+      etat.membres = res.membres.slice();
       if (res.membres.length === 0) liste.appendChild(el('div', 'carte', 'Aucun adhérent dans ce créneau.'));
       res.membres.forEach(function(m) {
         liste.appendChild(creerLigneMembre(m, m.present === null ? 1 : m.present)); // par défaut présent
       });
     });
+  }
+
+  // ── Prévenir le groupe par SMS ──
+  // Les SMS partent du téléphone de l'animateur, un par adhérent : un SMS
+  // groupé montrerait à chacun les numéros de tous les autres.
+
+  // Numéro utilisable dans un lien sms: (le classeur peut avoir perdu le 0 initial).
+  function numeroSms(tel) {
+    var brut = String(tel || '').trim();
+    var chiffres = brut.replace(/\D/g, '');
+    if (!chiffres) return '';
+    if (brut.charAt(0) === '+') return '+' + chiffres;
+    if (chiffres.length === 9) return '0' + chiffres;
+    if (chiffres.length === 11 && chiffres.indexOf('33') === 0) return '+' + chiffres;
+    return chiffres;
+  }
+
+  // iPhone : sms:NUMERO&body=… ; Android et autres : sms:NUMERO?body=…
+  function lienSms(numero, message) {
+    var ios = /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    return 'sms:' + numero + (ios ? '&' : '?') + 'body=' + encodeURIComponent(message);
+  }
+
+  function messageParDefaut() {
+    var c = etat.creneau;
+    var s = Api.session();
+    var quand = [c.jour, etat.date.texte, c.heure ? 'à ' + c.heure : ''].filter(Boolean).join(' ');
+    return 'Bonjour, le cours de ' + c.activite + ' du ' + quand +
+      ' est annulé (absence de l\'animateur). Merci de votre compréhension. ' +
+      (s ? s.animateur + ' – ' : '') + 'Foyer Rural d\'Isneauville';
+  }
+
+  function ouvrirPanneauSms() {
+    effacerErreur();
+    if (!$('sms-message').value) $('sms-message').value = messageParDefaut();
+    $('panneau-sms').style.display = 'block';
+    afficherListeSms();
+    $('panneau-sms').scrollIntoView({ block: 'start' });
+  }
+
+  function fermerPanneauSms() {
+    $('panneau-sms').style.display = 'none';
+    $('sms-message').value = '';
+  }
+
+  function afficherListeSms() {
+    var message = $('sms-message').value.trim();
+    var liste = $('sms-liste');
+    vider(liste);
+    var avecNumero = 0;
+    etat.membres.forEach(function(m) {
+      var ligne = el('div', 'sms-ligne');
+      ligne.appendChild(el('span', '', m.prenom + ' ' + m.nom));
+      var numero = numeroSms(m.telephone);
+      if (!numero) {
+        ligne.appendChild(el('span', 'sans-numero', 'pas de numéro'));
+      } else {
+        avecNumero++;
+        var cle = m.ligne + '|' + numero;
+        var lien = el('a', '', etat.smsEnvoyes[cle] ? 'Renvoyer' : 'Envoyer');
+        lien.href = lienSms(numero, message);
+        if (etat.smsEnvoyes[cle]) ligne.classList.add('envoye');
+        lien.onclick = function() {
+          if (!$('sms-message').value.trim()) { afficherErreur('Le message est vide.'); return false; }
+          etat.smsEnvoyes[cle] = true;
+          ligne.classList.add('envoye');
+          lien.textContent = 'Renvoyer';
+          majCompteurSms();
+        };
+        ligne.appendChild(lien);
+      }
+      liste.appendChild(ligne);
+    });
+    if (etat.membres.length === 0) liste.appendChild(el('div', 'note', 'Aucun adhérent dans ce créneau.'));
+    liste.dataset.total = avecNumero;
+    majCompteurSms();
+  }
+
+  function majCompteurSms() {
+    var total = Number($('sms-liste').dataset.total || 0);
+    var envoyes = Object.keys(etat.smsEnvoyes).length;
+    $('sms-compteur').textContent = total
+      ? envoyes + ' / ' + total + ' SMS ouvert(s). Après chaque envoi, revenez ici pour le suivant.'
+      : 'Aucun numéro de téléphone dans ce créneau.';
   }
 
   // ── Ajout manuel d'un membre (nécessite le réseau) ──
@@ -265,6 +354,7 @@
       var res = await Api.appeler('ajouterMembre', Object.assign({ animateurFichier: etat.creneau.animateurFichier, code: etat.creneau.code }, m));
       if (!res.ok) { afficherErreur(res.message); return; }
       m.ligne = res.ligne;
+      etat.membres.push(m);
       $('liste-membres').appendChild(creerLigneMembre(m, 1)); // présent par défaut
       Api.modifierCache('listerMembres', paramsMembres(), function(cache) {
         cache.membres.push({ ligne: m.ligne, nom: m.nom, prenom: m.prenom, telephone: m.telephone, present: null });
@@ -444,6 +534,9 @@
   $('input-pin').addEventListener('keyup', function(e) { if (e.key === 'Enter') connecter(); });
   $('btn-consulter').onclick = ouvrirConsultation;
   $('btn-ouvrir-ajout').onclick = ouvrirFormulaireAjout;
+  $('btn-ouvrir-sms').onclick = ouvrirPanneauSms;
+  $('btn-fermer-sms').onclick = fermerPanneauSms;
+  $('sms-message').addEventListener('input', afficherListeSms);
   $('btn-confirmer-ajout').onclick = confirmerAjoutMembre;
   $('btn-annuler-ajout').onclick = fermerFormulaireAjout;
   $('btn-valider').onclick = validerAppel;

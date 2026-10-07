@@ -82,6 +82,19 @@
     <div class="entete-creneau" id="titre-creneau-appel"></div>
     <div id="liste-membres"></div>
 
+    <button class="secondaire" id="btn-ouvrir-sms" style="margin-bottom:8px;">📱 Prévenir le groupe par SMS</button>
+
+    <div id="panneau-sms" class="carte" style="display:none; margin-bottom:12px;">
+      <div class="note" style="margin-top:0; text-align:left;">
+        Message envoyé depuis votre téléphone, à chaque adhérent séparément :
+        personne ne voit le numéro des autres.
+      </div>
+      <textarea id="sms-message" class="champ" rows="5"></textarea>
+      <div id="sms-compteur" class="note" style="text-align:left; margin:0 0 8px;"></div>
+      <div id="sms-liste"></div>
+      <button class="secondaire" id="btn-fermer-sms">Fermer</button>
+    </div>
+
     <button class="secondaire" id="btn-ouvrir-ajout">+ Ajouter un membre</button>
 
     <div id="form-ajout-membre" class="carte" style="display:none; margin-top:12px;">

@@ -48,6 +48,10 @@ CORS préalable qu'Apps Script ne gère pas). Le fichier HTML « Index » de l'a
 - **Sécurité des écritures différées** : à l'envoi, le serveur retrouve la colonne par le texte de la
   date et chaque adhérent par son nom ; si une synchronisation a déplacé des lignes entre-temps,
   l'appel est quand même écrit au bon endroit. Les cases qui ne font pas partie de l'appel ne sont jamais modifiées.
+- **Prévenir le groupe par SMS** (écran d'appel, après choix de la date) : message prérempli
+  (annulation pour absence de l'animateur), modifiable. Chaque SMS part du téléphone de l'animateur,
+  **un adhérent à la fois** : personne ne voit le numéro des autres. Fonctionne aussi hors connexion
+  si la liste a déjà été chargée.
 - **Déconnexion** : efface le jeton et les listes gardées sur le téléphone (les appels en attente sont conservés).
 
 ## Sécurité
