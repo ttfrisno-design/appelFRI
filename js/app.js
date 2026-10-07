@@ -36,13 +36,13 @@
     var textes = [];
     if (!navigator.onLine) textes.push('📴 Hors connexion.');
     else if (depuisCache) textes.push('📴 Serveur injoignable : affichage des dernières données chargées.');
-    if (enAttente) textes.push('⏳ ' + enAttente + ' appel(s) en attente d\'envoi.');
+    if (enAttente) textes.push('⏳ ' + enAttente + ' envoi(s) en attente (appels, e-mails).');
     var b = $('banniere-hors-ligne');
     b.textContent = textes.join(' ');
     b.classList.toggle('visible', textes.length > 0);
 
     var lien = $('lien-envoyer-file');
-    lien.textContent = '↻ Renvoyer les appels en attente (' + enAttente + ')';
+    lien.textContent = '↻ Renvoyer les envois en attente (' + enAttente + ')';
     lien.style.display = enAttente ? 'inline-block' : 'none';
   }
 
@@ -275,9 +275,15 @@
       (s ? s.animateur + ' – ' : '') + 'Foyer Rural d\'Isneauville';
   }
 
+  function sujetParDefaut() {
+    return etat.creneau.activite + ' du ' + etat.date.texte + ' : cours annulé';
+  }
+
   function ouvrirPanneauSms() {
     effacerErreur();
     if (!$('sms-message').value) $('sms-message').value = messageParDefaut();
+    if (!$('email-sujet').value) $('email-sujet').value = sujetParDefaut();
+    majInfoEmail();
     $('panneau-sms').style.display = 'block';
     afficherListeSms();
     $('panneau-sms').scrollIntoView({ block: 'start' });
@@ -286,6 +292,7 @@
   function fermerPanneauSms() {
     $('panneau-sms').style.display = 'none';
     $('sms-message').value = '';
+    $('email-sujet').value = '';
   }
 
   function afficherListeSms() {
@@ -327,6 +334,59 @@
     $('sms-compteur').textContent = total
       ? envoyes + ' / ' + total + ' SMS ouvert(s). Après chaque envoi, revenez ici pour le suivant.'
       : 'Aucun numéro de téléphone dans ce créneau.';
+  }
+
+  // ── Prévenir le groupe par e-mail (envoyé par le script) ──
+  function majInfoEmail() {
+    var connus = etat.membres.filter(function(m) { return m.aEmail !== undefined; });
+    var avec = etat.membres.filter(function(m) { return m.aEmail; }).length;
+    var info = $('email-info');
+    var btn = $('btn-envoyer-email');
+    if (connus.length && !avec) {
+      info.textContent = 'Aucune adresse e-mail dans ce créneau : utilisez les SMS.';
+      btn.disabled = true;
+      return;
+    }
+    btn.disabled = false;
+    info.textContent = connus.length
+      ? avec + ' adhérent(s) sur ' + etat.membres.length + ' ont une adresse e-mail.'
+      : '';
+  }
+
+  async function envoyerEmailGroupe() {
+    var sujet = $('email-sujet').value.trim();
+    var message = $('sms-message').value.trim();
+    if (!sujet || !message) { afficherErreur('Renseigne l\'objet et le message.'); return; }
+    var avec = etat.membres.filter(function(m) { return m.aEmail; }).length;
+    if (!confirm('Envoyer cet e-mail à ' + (avec ? avec + ' adhérent(s)' : 'tous les adhérents ayant une adresse') +
+        ' du créneau ' + etat.creneau.activite + ' ?')) return;
+
+    var id = Api.mettreEnFile({
+      action: 'envoyerEmailGroupe',
+      params: { animateurFichier: etat.creneau.animateurFichier, code: etat.creneau.code, sujet: sujet, message: message },
+      libelle: 'E-mail « ' + sujet + ' »'
+    });
+    var btn = $('btn-envoyer-email');
+    btn.disabled = true;
+    var bilan;
+    try {
+      bilan = await Api.envoyerFile();
+    } finally {
+      btn.disabled = false;
+    }
+    majEtatReseau();
+    signalerAutresResultats(bilan, id);
+
+    var envoye = bilan.envoyes.filter(function(x) { return x.appel.id === id; })[0];
+    var erreur = bilan.erreurs.filter(function(x) { return x.appel.id === id; })[0];
+    var info = $('email-info');
+    if (envoye) {
+      info.textContent = '✅ E-mail envoyé à ' + envoye.res.nombre + ' adresse(s).';
+    } else if (erreur && !erreur.garde) {
+      afficherErreur(erreur.res.message);
+    } else {
+      info.textContent = '⏳ Pas de connexion au serveur : l\'e-mail partira automatiquement dès le retour du réseau.';
+    }
   }
 
   // ── Ajout manuel d'un membre (nécessite le réseau) ──
@@ -382,7 +442,7 @@
     if (presences.length === 0) { afficherErreur('Aucun adhérent à enregistrer.'); return; }
 
     var params = Object.assign(paramsMembres(), { date: etat.date.texte, presences: presences });
-    var id = Api.mettreEnFile({ params: params, libelle: etat.creneau.activite + ' du ' + etat.date.texte });
+    var id = Api.mettreEnFile({ action: 'enregistrerAppel', params: params, libelle: 'Appel ' + etat.creneau.activite + ' du ' + etat.date.texte });
 
     // Garde localement l'appel pour le retrouver tel quel, même hors connexion.
     Api.modifierCache('listerMembres', paramsMembres(), function(cache) {
@@ -424,10 +484,10 @@
   function signalerAutresResultats(bilan, saufId) {
     var messages = [];
     bilan.envoyes.forEach(function(x) {
-      if (x.appel.id !== saufId) messages.push('Appel en attente envoyé : ' + x.appel.libelle + '.');
+      if (x.appel.id !== saufId) messages.push('Envoi en attente transmis : ' + x.appel.libelle + '.');
     });
     bilan.erreurs.forEach(function(x) {
-      if (x.appel.id !== saufId) messages.push('Appel « ' + x.appel.libelle + ' » ' + (x.garde ? 'toujours en attente' : 'refusé') + ' : ' + x.res.message);
+      if (x.appel.id !== saufId) messages.push('« ' + x.appel.libelle + ' » ' + (x.garde ? 'toujours en attente' : 'refusé') + ' : ' + x.res.message);
     });
     if (bilan.erreurs.some(function(x) { return x.appel.id !== saufId; })) afficherErreur(messages.join('\n'));
     else if (messages.length) console.info(messages.join('\n'));
@@ -536,6 +596,7 @@
   $('btn-ouvrir-ajout').onclick = ouvrirFormulaireAjout;
   $('btn-ouvrir-sms').onclick = ouvrirPanneauSms;
   $('btn-fermer-sms').onclick = fermerPanneauSms;
+  $('btn-envoyer-email').onclick = envoyerEmailGroupe;
   $('sms-message').addEventListener('input', afficherListeSms);
   $('btn-confirmer-ajout').onclick = confirmerAjoutMembre;
   $('btn-annuler-ajout').onclick = fermerFormulaireAjout;

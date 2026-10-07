@@ -111,8 +111,8 @@ var Api = (function() {
     if (cache) { modifier(cache); ecrire(cle, cache); }
   }
 
-  // ── File d'attente des appels ──
-  // Un appel validé est d'abord rangé sur le téléphone puis envoyé :
+  // ── File d'attente des envois (appels, e-mails au groupe) ──
+  // Un envoi est d'abord rangé sur le téléphone puis transmis :
   // rien n'est perdu si le réseau coupe.
   function file() { return lire(CLE_FILE) || []; }
 
@@ -151,7 +151,7 @@ var Api = (function() {
           var res = null;
           for (var j = 0; j < jetons.length && !res; j++) {
             try {
-              res = await appeler('enregistrerAppel', appel.params, jetons[j]);
+              res = await appeler(appel.action || 'enregistrerAppel', appel.params, jetons[j]);
             } catch (e) {
               if (!e.sessionExpiree || j === jetons.length - 1) throw e;
             }

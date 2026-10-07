@@ -26,13 +26,15 @@ CORS préalable qu'Apps Script ne gère pas). Le fichier HTML « Index » de l'a
      s'affichent une seule fois dans le journal d'exécution.
 3. **Code de consultation** (lecture seule) : exécuter `genererCodeConsultation()` et noter le code
    affiché. Il remplace l'ancien mode « Consulter sans code ».
-4. **Déploiement** : *Déployer > Gérer les déploiements*, modifier le déploiement « Application Web »,
+4. **E-mails** : exécuter une fois `autoriserEnvoiEmails()` et accepter l'autorisation Google
+   (envoyer des e-mails en votre nom).
+5. **Déploiement** : *Déployer > Gérer les déploiements*, modifier le déploiement « Application Web »,
    choisir *Nouvelle version*. Exécuter en tant que : *Moi* ; accès : *Tout le monde*.
    Ouvrir l'URL `/exec` dans un navigateur doit afficher `{"ok":true,...}`.
-5. **Interface** : coller cette URL `/exec` dans `js/config.js` (`API_URL`), puis publier
+6. **Interface** : coller cette URL `/exec` dans `js/config.js` (`API_URL`), puis publier
    (tout envoi sur `main` redéploie automatiquement ; activer une fois *Settings > Pages > Source : GitHub Actions*).
    L'application est alors disponible à l'adresse `https://ttfrisno-design.github.io/appelFRI/`.
-6. **Installation sur le téléphone** : ouvrir l'adresse, puis
+7. **Installation sur le téléphone** : ouvrir l'adresse, puis
    - Android (Chrome) : menu ⋮ > *Installer l'application* / *Ajouter à l'écran d'accueil* ;
    - iPhone (Safari) : bouton Partager > *Sur l'écran d'accueil*.
 
@@ -48,10 +50,13 @@ CORS préalable qu'Apps Script ne gère pas). Le fichier HTML « Index » de l'a
 - **Sécurité des écritures différées** : à l'envoi, le serveur retrouve la colonne par le texte de la
   date et chaque adhérent par son nom ; si une synchronisation a déplacé des lignes entre-temps,
   l'appel est quand même écrit au bon endroit. Les cases qui ne font pas partie de l'appel ne sont jamais modifiées.
-- **Prévenir le groupe par SMS** (écran d'appel, après choix de la date) : message prérempli
-  (annulation pour absence de l'animateur), modifiable. Chaque SMS part du téléphone de l'animateur,
-  **un adhérent à la fois** : personne ne voit le numéro des autres. Fonctionne aussi hors connexion
-  si la liste a déjà été chargée.
+- **Prévenir le groupe** (écran d'appel, après choix de la date) : message prérempli
+  (annulation pour absence de l'animateur), modifiable, envoyé au choix :
+  - **par e-mail** : envoyé par le compte Google du script (fri.inscri@gmail.com) à toutes les adresses
+    de la colonne Email du créneau, en **copie cachée**. Hors connexion, l'e-mail part au retour du réseau.
+    Limite Gmail gratuite : environ 100 destinataires par jour (`autoriserEnvoiEmails()` affiche le quota restant) ;
+  - **par SMS** : depuis le téléphone de l'animateur, **un adhérent à la fois** : personne ne voit
+    le numéro des autres.
 - **Déconnexion** : efface le jeton et les listes gardées sur le téléphone (les appels en attente sont conservés).
 
 ## Sécurité
@@ -73,6 +78,7 @@ CORS préalable qu'Apps Script ne gère pas). Le fichier HTML « Index » de l'a
 | `genererCodeConsultation()` / `supprimerCodeConsultation()` | Crée (au hasard) ou supprime le code de lecture seule |
 | `definirCodeConsultation(code)` | Choisit soi-même le code de lecture seule (via une fonction temporaire) |
 | `deconnecterToutLeMonde()` | Invalide toutes les sessions ouvertes |
+| `autoriserEnvoiEmails()` | Autorise l'envoi d'e-mails (une fois) et affiche le quota restant du jour |
 | `viderCacheCreneaux()` | Rafraîchit immédiatement la liste des créneaux en consultation |
 | `debloquerConnexions()` | Lève le blocage après trop de codes faux |
 

@@ -82,14 +82,24 @@
     <div class="entete-creneau" id="titre-creneau-appel"></div>
     <div id="liste-membres"></div>
 
-    <button class="secondaire" id="btn-ouvrir-sms" style="margin-bottom:8px;">📱 Prévenir le groupe par SMS</button>
+    <button class="secondaire" id="btn-ouvrir-sms" style="margin-bottom:8px;">📣 Prévenir le groupe</button>
 
     <div id="panneau-sms" class="carte" style="display:none; margin-bottom:12px;">
+      <input type="text" id="email-sujet" placeholder="Objet de l'e-mail">
+      <textarea id="sms-message" class="champ" rows="5" placeholder="Message"></textarea>
+
+      <div class="titre-envoi">✉️ Par e-mail</div>
       <div class="note" style="margin-top:0; text-align:left;">
-        Message envoyé depuis votre téléphone, à chaque adhérent séparément :
+        Envoyé automatiquement par le Foyer, en copie cachée : personne ne voit l'adresse des autres.
+      </div>
+      <div id="email-info" class="note" style="text-align:left; margin:0 0 8px;"></div>
+      <button id="btn-envoyer-email">Envoyer l'e-mail</button>
+
+      <div class="titre-envoi">📱 Par SMS</div>
+      <div class="note" style="margin-top:0; text-align:left;">
+        Envoyé depuis votre téléphone, à chaque adhérent séparément :
         personne ne voit le numéro des autres.
       </div>
-      <textarea id="sms-message" class="champ" rows="5"></textarea>
       <div id="sms-compteur" class="note" style="text-align:left; margin:0 0 8px;"></div>
       <div id="sms-liste"></div>
       <button class="secondaire" id="btn-fermer-sms">Fermer</button>

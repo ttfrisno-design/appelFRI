@@ -25,6 +25,8 @@
  *    "Application Web" existant > Nouvelle version.
  *    Exécuter en tant que : Moi. Qui a accès : Tout le monde.
  * 6. Copier l'URL (se termine par /exec) dans js/config.js.
+ * 7. E-mails « Prévenir le groupe » : exécuter une fois autoriserEnvoiEmails()
+ *    pour accepter l'autorisation Google, puis redéployer une nouvelle version.
  *
  * Sécurité :
  * - Les PIN ne sont stockés que sous forme hachée (SHA-256 salé)
@@ -43,7 +45,12 @@ var CONFIG = {
   DEST_FOLDER_ID_ANIMATEURS: '1ShdHxXvGdU0wim2xbyPxShZ8Zan3uOC6', // 11-Classeurs adhérents par animateur
   DUREE_JETON_JOURS: 30,
   MAX_ECHECS: 20,
-  DUREE_BLOCAGE_SEC: 900
+  DUREE_BLOCAGE_SEC: 900,
+  // E-mails « Prévenir le groupe » : nom d'expéditeur affiché, et adresse
+  // de réponse facultative (vide = les réponses reviennent au compte du script).
+  EMAIL_NOM_EXPEDITEUR: 'Foyer Rural d\'Isneauville',
+  EMAIL_REPONDRE_A: '',
+  EMAIL_DESTINATAIRES_PAR_ENVOI: 50 // limite Gmail par message
 };
 
 // Mêmes préfixes que le script des classeurs — sert à filtrer le mode
@@ -75,7 +82,8 @@ var ACTIONS = {
   listerTypesActivite: { role: 'lecture', fn: actionListerTypesActivite_ },
   listerTousLesCreneaux: { role: 'lecture', fn: actionListerTousLesCreneaux_ },
   listerDatesConsult: { role: 'lecture', fn: actionListerDatesConsult_ },
-  listerPresencesConsult: { role: 'lecture', fn: actionListerPresencesConsult_ }
+  listerPresencesConsult: { role: 'lecture', fn: actionListerPresencesConsult_ },
+  envoyerEmailGroupe: { role: ROLE_ANIMATEUR, fn: actionEnvoyerEmailGroupe_ }
 };
 
 function doPost(e) {
@@ -313,13 +321,16 @@ function valeurPresence_(v) {
 function lireMembres_(sheet, colonne, avecTelephone) {
   var lastRow = sheet.getLastRow();
   if (lastRow < 4) return [];
-  var noms = sheet.getRange(4, 1, lastRow - 3, 3).getDisplayValues(); // A:C (Nom, Prénom, Téléphone tel qu'affiché)
+  var noms = sheet.getRange(4, 1, lastRow - 3, 4).getDisplayValues(); // A:D (Nom, Prénom, Téléphone tel qu'affiché, Email)
   var valeurs = sheet.getRange(4, colonne, lastRow - 3, 1).getValues();
   var membres = [];
   for (var i = 0; i < noms.length; i++) {
     if (!noms[i][0] && !noms[i][1]) continue;
     var m = { ligne: 4 + i, nom: noms[i][0], prenom: noms[i][1], present: valeurPresence_(valeurs[i][0]) };
-    if (avecTelephone) m.telephone = noms[i][2];
+    if (avecTelephone) {
+      m.telephone = noms[i][2];
+      m.aEmail = emailValide_(noms[i][3]); // l'adresse elle-même n'est jamais envoyée au téléphone
+    }
     membres.push(m);
   }
   return membres;
@@ -461,6 +472,57 @@ function actionEnregistrerAppel_(req, session) {
   } finally {
     lock.releaseLock();
   }
+}
+
+// ── Prévenir le groupe par e-mail ───────────────────────────────
+// Envoyé par le compte Google du script, adresses en copie cachée :
+// aucun adhérent ne voit l'adresse des autres.
+
+function emailValide_(email) {
+  return /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/.test(String(email || '').trim());
+}
+
+function actionEnvoyerEmailGroupe_(req, session) {
+  if (!autoriseAcces_(session.nom, req.animateurFichier)) return { ok: false, message: 'Accès non autorisé à ce classeur.' };
+  var sujet = String(req.sujet || '').trim().slice(0, 200);
+  var message = String(req.message || '').trim().slice(0, 5000);
+  if (!sujet || !message) return { ok: false, message: 'Objet et message requis.' };
+
+  var o = ouvrirOnglet_(req.animateurFichier, req.code);
+  if (o.erreur) return { ok: false, message: o.erreur };
+  var sheet = o.sheet;
+
+  var lastRow = sheet.getLastRow();
+  var adresses = [];
+  if (lastRow >= 4) {
+    sheet.getRange(4, 4, lastRow - 3, 1).getDisplayValues().forEach(function(r) {
+      var email = String(r[0] || '').trim().toLowerCase();
+      if (emailValide_(email) && adresses.indexOf(email) === -1) adresses.push(email);
+    });
+  }
+  if (adresses.length === 0) return { ok: false, message: 'Aucune adresse e-mail dans ce créneau.' };
+
+  var quota = MailApp.getRemainingDailyQuota();
+  if (quota < adresses.length) {
+    return { ok: false, message: 'Limite d\'envoi Google atteinte pour aujourd\'hui (' + quota + ' e-mail(s) restant(s) pour ' +
+      adresses.length + ' destinataires). Réessayer demain ou prévenir par SMS.' };
+  }
+
+  var expediteur = Session.getEffectiveUser().getEmail();
+  var corps = message + '\n\n— ' + session.nom + ' (envoyé via l\'application d\'appel du ' + CONFIG.EMAIL_NOM_EXPEDITEUR + ')';
+  for (var i = 0; i < adresses.length; i += CONFIG.EMAIL_DESTINATAIRES_PAR_ENVOI) {
+    var options = {
+      to: expediteur,
+      bcc: adresses.slice(i, i + CONFIG.EMAIL_DESTINATAIRES_PAR_ENVOI).join(','),
+      subject: sujet,
+      body: corps,
+      name: CONFIG.EMAIL_NOM_EXPEDITEUR
+    };
+    if (CONFIG.EMAIL_REPONDRE_A) options.replyTo = CONFIG.EMAIL_REPONDRE_A;
+    MailApp.sendEmail(options);
+  }
+  Logger.log('E-mail groupe envoyé par ' + session.nom + ' (' + req.animateurFichier + ' / ' + req.code + ') à ' + adresses.length + ' adresse(s).');
+  return { ok: true, nombre: adresses.length };
 }
 
 // ── Actions de consultation (lecture seule, jeton obligatoire) ──
@@ -655,6 +717,13 @@ function viderCacheCreneaux() {
   var cache = CacheService.getScriptCache();
   Object.keys(TYPES).forEach(function(type) { cache.remove('CRENEAUX_' + type); });
   Logger.log('Cache vidé pour tous les types.');
+}
+
+// À exécuter UNE fois depuis l'éditeur après la mise à jour : Google demande
+// alors l'autorisation d'envoyer des e-mails (puis redéployer une nouvelle version).
+function autoriserEnvoiEmails() {
+  Logger.log('Envoi d\'e-mails autorisé. Quota restant aujourd\'hui : ' + MailApp.getRemainingDailyQuota() +
+    ' destinataire(s). Expéditeur : ' + Session.getEffectiveUser().getEmail());
 }
 
 function debloquerConnexions() {

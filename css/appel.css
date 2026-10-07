@@ -187,4 +187,5 @@ textarea.champ { font-family: inherit; resize: vertical; }
   text-decoration: none;
 }
 .sms-ligne.envoye a { background: #A0AEC0; }
+.titre-envoi { font-weight: bold; margin: 16px 0 4px; color: #1B4332; }
 .sms-ligne .sans-numero { color: #A0AEC0; font-size: 13px; }
