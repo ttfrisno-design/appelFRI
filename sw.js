@@ -1,7 +1,7 @@
 // Service worker : l'application s'ouvre même sans réseau.
 // Les échanges avec le serveur Apps Script (autre domaine) ne passent
 // pas par ici : ils sont gérés par js/api.js (cache + file d'attente).
-const VERSION = 'fri-appel-v6';
+const VERSION = 'fri-appel-v7';
 const ASSETS = [
   './',
   './index.html',

@@ -74,21 +74,20 @@
   <!-- Écran 3 : liste des dates -->
   <div id="ecran-dates" class="ecran">
     <div class="entete-creneau" id="titre-creneau-dates"></div>
-    <div id="liste-dates"></div>
-
     <button class="secondaire" id="btn-ouvrir-ajout-date">+ Ajouter une séance (rattrapage)</button>
-    <div id="form-ajout-date" class="carte" style="display:none; margin-top:12px;">
+    <div id="form-ajout-date" class="carte" style="display:none; margin-bottom:12px;">
       <label class="note" for="ajout-date" style="display:block; text-align:left; margin:0 0 4px;">Date de la séance</label>
       <input type="date" id="ajout-date" class="champ">
       <button id="btn-confirmer-ajout-date">Ajouter la séance</button>
       <button class="secondaire" id="btn-annuler-ajout-date">Annuler</button>
     </div>
+    <div id="liste-dates" style="margin-top:12px;"></div>
+
   </div>
 
   <!-- Écran 4 : appel -->
   <div id="ecran-appel" class="ecran">
     <div class="entete-creneau" id="titre-creneau-appel"></div>
-    <div id="liste-membres"></div>
 
     <button class="secondaire" id="btn-ouvrir-deplacer" style="margin-bottom:8px;">📅 Déplacer cette séance</button>
     <div id="form-deplacer" class="carte" style="display:none; margin-bottom:12px;">
@@ -129,7 +128,7 @@
 
     <button class="secondaire" id="btn-ouvrir-ajout">+ Ajouter un membre</button>
 
-    <div id="form-ajout-membre" class="carte" style="display:none; margin-top:12px;">
+    <div id="form-ajout-membre" class="carte" style="display:none; margin-top:8px;">
       <input type="text" id="ajout-nom" placeholder="Nom" autocomplete="off">
       <input type="text" id="ajout-prenom" placeholder="Prénom" autocomplete="off">
       <input type="tel" id="ajout-telephone" class="champ" placeholder="Téléphone" autocomplete="off">
@@ -137,6 +136,8 @@
       <button id="btn-confirmer-ajout">Ajouter à la liste</button>
       <button class="secondaire" id="btn-annuler-ajout">Annuler</button>
     </div>
+
+    <div id="liste-membres" style="margin-top:12px;"></div>
 
     <button id="btn-valider" style="margin-top:12px;">Valider l'appel</button>
   </div>
