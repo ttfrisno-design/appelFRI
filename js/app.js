@@ -169,6 +169,7 @@
   // ── Écran 3 : dates ──
   function choisirCreneau(c) {
     etat.creneau = c;
+    fermerFormulaireAjoutDate();
     $('titre-creneau-dates').textContent = c.activite + ' — ' + c.jour + ' ' + c.heure;
     var liste = $('liste-dates');
     chargement(liste);
@@ -224,10 +225,12 @@
     return row;
   }
 
-  function choisirDate(d) {
+  // apres : fonction appelée une fois la liste des adhérents chargée.
+  function choisirDate(d, apres) {
     etat.date = d;
-    $('titre-creneau-appel').textContent = etat.creneau.activite + ' — ' + d.texte;
+    $('titre-creneau-appel').textContent = etat.creneau.activite + ' — ' + jourSemaine(d.texte) + ' ' + d.texte;
     fermerFormulaireAjout();
+    fermerFormulaireDeplacer();
     var liste = $('liste-membres');
     chargement(liste);
     afficherEcran('ecran-appel');
@@ -241,7 +244,127 @@
       res.membres.forEach(function(m) {
         liste.appendChild(creerLigneMembre(m, m.present === null ? 1 : m.present)); // par défaut présent
       });
+      if (apres) apres();
     });
+  }
+
+  // ── Dates : conversions et jour de la semaine ──
+  var JOURS = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+
+  // "16/10/2026" → Date, ou null
+  function dateDepuisTexte(texte) {
+    var m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(texte || ''));
+    return m ? new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]), 12) : null;
+  }
+
+  function jourSemaine(texte) {
+    var d = dateDepuisTexte(texte);
+    return d ? JOURS[d.getDay()] : '';
+  }
+
+  // champ <input type="date"> (aaaa-mm-jj) ↔ jj/mm/aaaa
+  function texteDepuisChamp(valeur) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(valeur || '');
+    return m ? m[3] + '/' + m[2] + '/' + m[1] : '';
+  }
+
+  function champDepuisTexte(texte) {
+    var m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(texte || '');
+    return m ? m[3] + '-' + m[2] + '-' + m[1] : '';
+  }
+
+  function quandSeance(texte) {
+    var c = etat.creneau;
+    return [jourSemaine(texte), texte, c.heure ? 'à ' + c.heure : ''].filter(Boolean).join(' ');
+  }
+
+  function signature() {
+    var s = Api.session();
+    return (s ? s.animateur + ' – ' : '') + 'Foyer Rural d\'Isneauville';
+  }
+
+  function erreurReseauModif(e) {
+    if (e.sessionExpiree) { afficherEcran('ecran-pin'); $('erreur-pin').textContent = e.message; return; }
+    afficherErreur(e.horsLigne && !e.serveur
+      ? 'Pas de réseau : ajouter ou déplacer une séance nécessite une connexion.'
+      : 'Erreur : ' + e.message);
+  }
+
+  // ── Ajouter une séance (rattrapage) ──
+  function ouvrirFormulaireAjoutDate() {
+    effacerErreur();
+    $('ajout-date').value = '';
+    $('form-ajout-date').style.display = 'block';
+    $('ajout-date').focus();
+  }
+
+  function fermerFormulaireAjoutDate() { $('form-ajout-date').style.display = 'none'; }
+
+  async function confirmerAjoutDate() {
+    var texte = texteDepuisChamp($('ajout-date').value);
+    if (!texte) { afficherErreur('Choisis une date.'); return; }
+    var btn = $('btn-confirmer-ajout-date');
+    btn.disabled = true;
+    try {
+      var res = await Api.appeler('ajouterDate', { animateurFichier: etat.creneau.animateurFichier, code: etat.creneau.code, date: texte });
+      if (!res.ok) { afficherErreur(res.message); return; }
+      fermerFormulaireAjoutDate();
+      var c = etat.creneau;
+      choisirDate(res.date, function() {
+        ouvrirPanneauSms(
+          'Bonjour, une séance de ' + c.activite + ' aura lieu le ' + quandSeance(res.date.texte) + '. ' +
+            'À bientôt ! ' + signature(),
+          c.activite + ' : séance le ' + jourSemaine(res.date.texte) + ' ' + res.date.texte
+        );
+      });
+    } catch (e) {
+      erreurReseauModif(e);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  // ── Déplacer une séance (cours annulé et reporté) ──
+  function ouvrirFormulaireDeplacer() {
+    effacerErreur();
+    $('deplacer-date').value = champDepuisTexte(etat.date.texte);
+    $('form-deplacer').style.display = 'block';
+    $('deplacer-date').focus();
+  }
+
+  function fermerFormulaireDeplacer() { $('form-deplacer').style.display = 'none'; }
+
+  async function confirmerDeplacer() {
+    var ancienne = etat.date.texte;
+    var nouvelle = texteDepuisChamp($('deplacer-date').value);
+    if (!nouvelle) { afficherErreur('Choisis la nouvelle date.'); return; }
+    if (nouvelle === ancienne) { afficherErreur('Choisis une date différente de ' + ancienne + '.'); return; }
+    var dejaSaisi = etat.membres.some(function(m) { return m.present !== null && m.present !== undefined; });
+    if (!confirm('Déplacer la séance du ' + ancienne + ' au ' + jourSemaine(nouvelle) + ' ' + nouvelle + ' ?' +
+        (dejaSaisi ? '\nLes présences déjà enregistrées pour cette séance seront conservées sur la nouvelle date.' : ''))) return;
+
+    var btn = $('btn-confirmer-deplacer');
+    btn.disabled = true;
+    try {
+      var res = await Api.appeler('modifierDate', {
+        animateurFichier: etat.creneau.animateurFichier, code: etat.creneau.code, ancienne: ancienne, nouvelle: nouvelle
+      });
+      if (!res.ok) { afficherErreur(res.message); return; }
+      fermerFormulaireDeplacer();
+      var c = etat.creneau;
+      var quandAvant = quandSeance(ancienne);
+      choisirDate(res.date, function() {
+        ouvrirPanneauSms(
+          'Bonjour, le cours de ' + c.activite + ' du ' + quandAvant + ' est déplacé au ' + quandSeance(nouvelle) + '. ' +
+            'Merci de votre compréhension. ' + signature(),
+          c.activite + ' : cours du ' + ancienne + ' déplacé au ' + jourSemaine(nouvelle) + ' ' + nouvelle
+        );
+      });
+    } catch (e) {
+      erreurReseauModif(e);
+    } finally {
+      btn.disabled = false;
+    }
   }
 
   // ── Prévenir le groupe par SMS ──
@@ -267,20 +390,19 @@
   }
 
   function messageParDefaut() {
-    var c = etat.creneau;
-    var s = Api.session();
-    var quand = [c.jour, etat.date.texte, c.heure ? 'à ' + c.heure : ''].filter(Boolean).join(' ');
-    return 'Bonjour, le cours de ' + c.activite + ' du ' + quand +
-      ' est annulé (absence de l\'animateur). Merci de votre compréhension. ' +
-      (s ? s.animateur + ' – ' : '') + 'Foyer Rural d\'Isneauville';
+    return 'Bonjour, le cours de ' + etat.creneau.activite + ' du ' + quandSeance(etat.date.texte) +
+      ' est annulé (absence de l\'animateur). Merci de votre compréhension. ' + signature();
   }
 
   function sujetParDefaut() {
     return etat.creneau.activite + ' du ' + etat.date.texte + ' : cours annulé';
   }
 
-  function ouvrirPanneauSms() {
+  // message / sujet : textes proposés (sinon annulation par défaut).
+  function ouvrirPanneauSms(message, sujet) {
     effacerErreur();
+    if (typeof message === 'string') $('sms-message').value = message;
+    if (typeof sujet === 'string') $('email-sujet').value = sujet;
     if (!$('sms-message').value) $('sms-message').value = messageParDefaut();
     if (!$('email-sujet').value) $('email-sujet').value = sujetParDefaut();
     majInfoEmail();
@@ -619,7 +741,13 @@
   $('input-pin').addEventListener('keyup', function(e) { if (e.key === 'Enter') connecter(); });
   $('btn-consulter').onclick = ouvrirConsultation;
   $('btn-ouvrir-ajout').onclick = ouvrirFormulaireAjout;
-  $('btn-ouvrir-sms').onclick = ouvrirPanneauSms;
+  $('btn-ouvrir-sms').onclick = function() { ouvrirPanneauSms(); };
+  $('btn-ouvrir-ajout-date').onclick = ouvrirFormulaireAjoutDate;
+  $('btn-confirmer-ajout-date').onclick = confirmerAjoutDate;
+  $('btn-annuler-ajout-date').onclick = fermerFormulaireAjoutDate;
+  $('btn-ouvrir-deplacer').onclick = ouvrirFormulaireDeplacer;
+  $('btn-confirmer-deplacer').onclick = confirmerDeplacer;
+  $('btn-annuler-deplacer').onclick = fermerFormulaireDeplacer;
   $('btn-fermer-sms').onclick = fermerPanneauSms;
   $('btn-envoyer-email').onclick = envoyerEmailGroupe;
   $('lien-whatsapp-groupe').onclick = function() {

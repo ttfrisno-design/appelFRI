@@ -83,7 +83,9 @@ var ACTIONS = {
   listerTousLesCreneaux: { role: 'lecture', fn: actionListerTousLesCreneaux_ },
   listerDatesConsult: { role: 'lecture', fn: actionListerDatesConsult_ },
   listerPresencesConsult: { role: 'lecture', fn: actionListerPresencesConsult_ },
-  envoyerEmailGroupe: { role: ROLE_ANIMATEUR, fn: actionEnvoyerEmailGroupe_ }
+  envoyerEmailGroupe: { role: ROLE_ANIMATEUR, fn: actionEnvoyerEmailGroupe_ },
+  ajouterDate: { role: ROLE_ANIMATEUR, fn: actionAjouterDate_ },
+  modifierDate: { role: ROLE_ANIMATEUR, fn: actionModifierDate_ }
 };
 
 function doPost(e) {
@@ -303,6 +305,8 @@ function decrireOnglet_(nomFichier, sheet) {
 // Colonnes fixes A-E, puis une colonne par date (en-têtes en ligne 3).
 // getDisplayValues() : toujours le texte affiché (dd/MM/yyyy), même si
 // Sheets a stocké la cellule comme une vraie date en interne.
+// Les dates sont triées par ordre chronologique (une date ajoutée depuis
+// l'application est placée en fin de tableau mais s'affiche à sa place).
 function lireDates_(sheet) {
   var nDateCols = sheet.getLastColumn() - 5;
   if (nDateCols <= 0) return { ok: true, dates: [], aujourdhui: '' };
@@ -311,7 +315,28 @@ function lireDates_(sheet) {
   for (var i = 0; i < headers.length; i++) {
     if (headers[i]) dates.push({ texte: headers[i], colonne: 6 + i });
   }
+  var cleTri = function(d) {
+    var date = lireDateTexte_(d.texte);
+    return date ? date.getTime() : Infinity;
+  };
+  dates.sort(function(a, b) { return (cleTri(a) - cleTri(b)) || (a.colonne - b.colonne); });
   return { ok: true, dates: dates, aujourdhui: Utilities.formatDate(new Date(), 'Europe/Paris', 'dd/MM/yyyy') };
+}
+
+// "dd/MM/yyyy" → Date (à midi, pour éviter tout décalage de fuseau), ou null.
+function lireDateTexte_(texte) {
+  var m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(texte || '').trim());
+  if (!m) return null;
+  var date = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]), 12);
+  return (date.getDate() === Number(m[1]) && date.getMonth() === Number(m[2]) - 1) ? date : null;
+}
+
+// Écrit une vraie date au format jj/mm/aaaa : l'affichage est le même
+// quelle que soit la langue du classeur.
+function ecrireEnTeteDate_(sheet, colonne, date) {
+  var cellule = sheet.getRange(3, colonne);
+  cellule.setNumberFormat('dd/MM/yyyy');
+  cellule.setValue(date);
 }
 
 function valeurPresence_(v) {
@@ -530,6 +555,72 @@ function actionEnvoyerEmailGroupe_(req, session) {
   }
   Logger.log('E-mail groupe envoyé par ' + session.nom + ' (' + req.animateurFichier + ' / ' + req.code + ') à ' + adresses.length + ' adresse(s).');
   return { ok: true, nombre: adresses.length };
+}
+
+// ── Ajouter / déplacer une séance ───────────────────────────────
+
+// Nouvelle colonne de date, à droite de la dernière (mise en forme recopiée).
+function actionAjouterDate_(req, session) {
+  if (!autoriseAcces_(session.nom, req.animateurFichier)) return { ok: false, message: 'Accès non autorisé à ce classeur.' };
+  var date = lireDateTexte_(req.date);
+  if (!date) return { ok: false, message: 'Date invalide.' };
+  var o = ouvrirOnglet_(req.animateurFichier, req.code);
+  if (o.erreur) return { ok: false, message: o.erreur };
+  var sheet = o.sheet;
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    var existantes = lireDates_(sheet).dates;
+    if (existantes.some(function(d) { return d.texte === req.date; })) {
+      return { ok: false, message: 'La date ' + req.date + ' existe déjà dans ce créneau.' };
+    }
+    var derniere = existantes.reduce(function(max, d) { return Math.max(max, d.colonne); }, 5);
+    var colonne = derniere + 1;
+    if (colonne > sheet.getMaxColumns()) sheet.insertColumnsAfter(sheet.getMaxColumns(), colonne - sheet.getMaxColumns());
+    if (derniere >= 6) {
+      var hauteur = sheet.getMaxRows();
+      var source = sheet.getRange(1, derniere, hauteur, 1);
+      var cible = sheet.getRange(1, colonne, hauteur, 1);
+      source.copyTo(cible, SpreadsheetApp.CopyPasteType.PASTE_FORMAT, false);
+      source.copyTo(cible, SpreadsheetApp.CopyPasteType.PASTE_DATA_VALIDATION, false);
+    }
+    ecrireEnTeteDate_(sheet, colonne, date);
+    SpreadsheetApp.flush();
+    Logger.log('Date ajoutée par ' + session.nom + ' : ' + req.animateurFichier + ' / ' + req.code + ' → ' + req.date);
+    return { ok: true, date: { texte: req.date, colonne: colonne } };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Change la date d'une séance (cours déplacé) : les présences déjà
+// saisies dans cette colonne restent attachées à la nouvelle date.
+function actionModifierDate_(req, session) {
+  if (!autoriseAcces_(session.nom, req.animateurFichier)) return { ok: false, message: 'Accès non autorisé à ce classeur.' };
+  var nouvelle = lireDateTexte_(req.nouvelle);
+  if (!nouvelle) return { ok: false, message: 'Nouvelle date invalide.' };
+  var o = ouvrirOnglet_(req.animateurFichier, req.code);
+  if (o.erreur) return { ok: false, message: o.erreur };
+  var sheet = o.sheet;
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    var existantes = lireDates_(sheet).dates;
+    var cible = existantes.filter(function(d) { return d.texte === req.ancienne; })[0];
+    if (!cible) return { ok: false, message: 'La date ' + req.ancienne + ' n\'existe plus dans ce créneau.' };
+    if (req.nouvelle === req.ancienne) return { ok: true, date: cible };
+    if (existantes.some(function(d) { return d.texte === req.nouvelle; })) {
+      return { ok: false, message: 'La date ' + req.nouvelle + ' existe déjà dans ce créneau.' };
+    }
+    ecrireEnTeteDate_(sheet, cible.colonne, nouvelle);
+    SpreadsheetApp.flush();
+    Logger.log('Date déplacée par ' + session.nom + ' : ' + req.animateurFichier + ' / ' + req.code + ' ' + req.ancienne + ' → ' + req.nouvelle);
+    return { ok: true, date: { texte: req.nouvelle, colonne: cible.colonne } };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 // ── Actions de consultation (lecture seule, jeton obligatoire) ──

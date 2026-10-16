@@ -50,6 +50,11 @@ CORS préalable qu'Apps Script ne gère pas). Le fichier HTML « Index » de l'a
 - **Sécurité des écritures différées** : à l'envoi, le serveur retrouve la colonne par le texte de la
   date et chaque adhérent par son nom ; si une synchronisation a déplacé des lignes entre-temps,
   l'appel est quand même écrit au bon endroit. Les cases qui ne font pas partie de l'appel ne sont jamais modifiées.
+- **Ajouter une séance** (liste des dates > « + Ajouter une séance ») : nouvelle colonne de date en fin
+  de tableau, affichée à sa place dans l'ordre chronologique.
+- **Déplacer une séance** (écran d'appel > « 📅 Déplacer cette séance ») : change la date en tête de colonne ;
+  les présences déjà saisies restent sur la séance. Dans les deux cas, le message aux adhérents est prérempli.
+  Nécessite une connexion.
 - **Prévenir le groupe** (écran d'appel, après choix de la date) : message prérempli
   (annulation pour absence de l'animateur), modifiable, envoyé au choix :
   - **par e-mail** : envoyé par le compte Google du script (fri.inscri@gmail.com) à toutes les adresses

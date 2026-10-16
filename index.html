@@ -75,12 +75,28 @@
   <div id="ecran-dates" class="ecran">
     <div class="entete-creneau" id="titre-creneau-dates"></div>
     <div id="liste-dates"></div>
+
+    <button class="secondaire" id="btn-ouvrir-ajout-date">+ Ajouter une séance (rattrapage)</button>
+    <div id="form-ajout-date" class="carte" style="display:none; margin-top:12px;">
+      <label class="note" for="ajout-date" style="display:block; text-align:left; margin:0 0 4px;">Date de la séance</label>
+      <input type="date" id="ajout-date" class="champ">
+      <button id="btn-confirmer-ajout-date">Ajouter la séance</button>
+      <button class="secondaire" id="btn-annuler-ajout-date">Annuler</button>
+    </div>
   </div>
 
   <!-- Écran 4 : appel -->
   <div id="ecran-appel" class="ecran">
     <div class="entete-creneau" id="titre-creneau-appel"></div>
     <div id="liste-membres"></div>
+
+    <button class="secondaire" id="btn-ouvrir-deplacer" style="margin-bottom:8px;">📅 Déplacer cette séance</button>
+    <div id="form-deplacer" class="carte" style="display:none; margin-bottom:12px;">
+      <label class="note" for="deplacer-date" style="display:block; text-align:left; margin:0 0 4px;">Nouvelle date</label>
+      <input type="date" id="deplacer-date" class="champ">
+      <button id="btn-confirmer-deplacer">Déplacer la séance</button>
+      <button class="secondaire" id="btn-annuler-deplacer">Annuler</button>
+    </div>
 
     <button class="secondaire" id="btn-ouvrir-sms" style="margin-bottom:8px;">📣 Prévenir le groupe</button>
 
